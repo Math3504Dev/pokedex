@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokedex Rétro Fidèle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* RESET & VARIABLES */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --red:#d60000; --dark-red:#a00000; --gray:#c0c0c0; --light-gray:#eee; --black:#111; --white:#fff; --font-retro:'Press Start 2P', monospace; }
+    body { background:url('https://i.imgur.com/yk3s5kQ.jpg') center/cover no-repeat; font-family:var(--font-retro); color:var(--black); padding:16px; }
+
+    /* LAYOUT */
+    .container { display:flex; height:90vh; border:8px solid var(--red); border-radius:12px; overflow:hidden; box-shadow:0 0 0 4px var(--dark-red); }
+    .sidebar { width:38%; background:var(--red); padding:12px; display:flex; flex-direction:column; overflow:auto; }
+    .detail { flex:1; background:var(--red); padding:12px; }
+
+    /* TOP BAR & LIGHTS */
+    .top-bar { height:60px; background:var(--red); border-bottom:6px solid var(--gray); display:flex; align-items:center; padding:0 12px; }
+    .top-bar .title { font-size:16px; color:var(--white); letter-spacing:2px; }
+    .lights { display:flex; gap:8px; margin-left:auto; }
+    .light { width:16px; height:16px; border:3px solid var(--gray); border-radius:50%; }
+    .light.red { background:#f00; animation:blink 1.2s infinite; }
+    .light.yellow { background:#ff0; animation:blink 1s infinite; }
+    .light.green { background:#0f0; animation:blink 0.8s infinite; }
+    .scanner { width:48px; height:48px; background:#0078ff; border:6px solid var(--gray); border-radius:50%; }
+
+    /* SEARCH */
+    .search-shape { position:relative; width:100%; height:40px; overflow:visible; margin-bottom:24px; }
+    .search-shape::before { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background:var(--white); border:6px solid var(--gray); clip-path:polygon(10% 0%,100% 0%,90% 100%,0% 100%); z-index:1; }
+    .search-shape input {
+      position:relative;
+      z-index:2;
+      width:100%;
+      height:36px;
+      border:none;
+      background:transparent;
+      padding-left:54px;
+      font-family:var(--font-retro);
+      font-size:16px;
+      line-height:36px;
+      outline:none;
+      text-align:left;
+      margin-top:2px;
+      padding-top:8px;
+    }
+    .search-shape input::placeholder {
+      font-size:16px;
+      line-height:36px;
+      color: #888;
+      opacity: 1;
+      text-align:left;
+    }
+
+    /* MINI DETAIL */
+    .mini-detail { width:100%; height:400px; background:var(--white); border:6px solid var(--gray); padding:8px; text-align:center; overflow-y:auto; }
+
+    /* MEMBER CARDS */
+    .members { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-top:20px; }
+    .member { background:var(--white); border-radius:10px; padding:20px; width:110px; box-shadow:0 0 10px rgba(0,0,0,0.1); transition:transform 0.3s; text-align:center; font-size:10px; cursor:pointer; }
+    .photo { width:60px; height:60px; margin:0 auto 8px; overflow:hidden; border-radius:50%; transition:transform 0.3s; }
+    .member:hover .photo { transform:scale(1.1); }
+    .photo img { width:100%; height:auto; }
+
+    /* DETAIL PANEL */
+    .detail-panel { background:var(--light-gray); border:6px solid var(--gray); height:100%; padding:12px; overflow-y:auto; animation:detailFadeIn 0.3s ease; display:flex; flex-direction:column; align-items:center; }
+    .detail-panel img { width:128px; height:128px; margin-bottom:12px; transition:transform 0.2s; }
+    .detail-panel h2, .detail-panel p { text-align:center; margin-bottom:8px; }
+    .detail-panel .summary { margin-bottom:12px; }
+    .detail-panel button { margin-top:12px; padding:8px 12px; border:4px solid var(--gray); background:#ff4444; color:var(--white); font-family:var(--font-retro); cursor:pointer; transition:background 0.2s, transform 0.1s; }
+    .detail-panel button:hover { background:#ff6666; transform:scale(1.05); }
+    .detail-panel ul { list-style:none; padding-left:0; width:100%; max-width:240px; }
+    .detail-panel ul li { background:var(--white); margin:4px 0; padding:4px; border:4px solid var(--gray); text-align:center; }
+    .full-details { display:none; margin-top:20px; animation:expandDetails 0.5s ease forwards; }
+    .full-details.active { display:block; }
+
+    @keyframes blink {0%,100%{opacity:1;}50%{opacity:0.2;}}
+    @keyframes detailFadeIn {from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    @keyframes expandDetails {from{height:0;opacity:0;}to{height:auto;opacity:1;}}
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="title">POKÉDEX RÉTRO</div>
+    <div class="scanner"></div>
+    <div class="lights">
+      <div class="light red"></div>
+      <div class="light yellow"></div>
+      <div class="light green"></div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="sidebar">
+      <div class="sidebar-top">
+        <div class="search-shape">
+          <input id="search" type="text" placeholder="Rechercher..." />
+        </div>
+        <div id="mini-detail" class="mini-detail">
+          <div class="members"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail">
+      <div id="detail-content" class="detail-panel">
+        <p>Fiche détaillée</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allPokemons = [];
+    const membersDiv = document.querySelector('.members');
+    const detailDiv = document.getElementById('detail-content');
+    const searchInput = document.getElementById('search');
+    const placeholderText = "Rechercher...";
+
+    // Charger les données des CSV (inchangé)
+    function loadCSVs() {
+      let infoData, imgData;
+      Papa.parse('pokedex_francais_complet.csv', { download: true, header: true, complete: res => {
+        infoData = res.data;
+        if (imgData) mergeData();
+      }});
+      Papa.parse('pokemon_images.csv', { download: true, header: true, delimiter: ',', complete: res => {
+        imgData = res.data;
+        if (infoData) mergeData();
+      }});
+
+      function mergeData() {
+        allPokemons = infoData.map(p => {
+          const paddedNum = String(p.Numéro).padStart(3, '0');
+          const img = imgData.find(i => String(i.Numéro).padStart(3, '0') === paddedNum) || {};
+          return {
+            id: paddedNum,
+            name: p.Nom,
+            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
+            abilities: p.Capacités ? p.Capacités.split(';') : [],
+            image_url: img['URL Image'] || `images/${paddedNum}.png`,
+            stats: {
+              PV: p.PV,
+              Attaque: p.Attaque,
+              Défense: p.Défense,
+              'Attaque Spéciale': p['Attaque Spéciale'],
+              'Défense Spéciale': p['Défense Spéciale'],
+              Vitesse: p.Vitesse
+            },
+            generation: p.Génération,
+            region: p.Région,
+            evolution: p.Évolution
+          };
+        });
+        renderMembers(allPokemons);
+      }
+    }
+
+    // Afficher les cartes des Pokémon
+    function renderMembers(list) {
+      membersDiv.innerHTML = list.map(p =>
+        `
+        <div class="member" data-id="${p.id}">
+          <div class="photo"><img src="${p.image_url}" alt="${p.name}"></div>
+          <h2>#${String(p.id).padStart(3,'0')}</h2>
+          <p class="title">${p.name}</p>
+        </div>
+        `
+      ).join('');
+      document.querySelectorAll('.member').forEach(el => el.addEventListener('click', () => loadDetail(el.dataset.id)));
+    }
+
+    // Afficher les détails d'un Pokémon (inchangé)
+    function loadDetail(id, showFull = false) {
+      const p = allPokemons.find(x => x.id === id);
+      if (!p) return;
+      let html = `
+        <img src="${p.image_url}" alt="${p.name}">
+        <h2>#${String(p.id).padStart(3,'0')} ${p.name}</h2>
+        <p class="summary">Types: ${p.types.join(', ')}</p>
+        <ul>${p.abilities.map(a => `<li>${a}</li>`).join('')}</ul>
+        <button id="voir-plus">${showFull ? 'Voir moins' : 'Voir plus'}</button>
+        <div class="full-details${showFull ? ' active' : ''}">
+          <h3>Statistiques</h3>
+          <ul>
+            <li>PV: ${p.stats.PV}</li>
+            <li>Attaque: ${p.stats.Attaque}</li>
+            <li>Défense: ${p.stats.Défense}</li>
+            <li>Attaque Spéciale: ${p.stats['Attaque Spéciale']}</li>
+            <li>Défense Spéciale: ${p.stats['Défense Spéciale']}</li>
+            <li>Vitesse: ${p.stats.Vitesse}</li>
+          </ul>
+          <p>Génération: ${p.generation}</p>
+          <p>Région: ${p.region}</p>
+          ${p.evolution ? `<p>Évolue de: ${p.evolution}</p>` : ''}
+        </div>
+      `;
+      detailDiv.innerHTML = html;
+
+      const fullDetails = detailDiv.querySelector('.full-details');
+      document.getElementById('voir-plus').addEventListener('click', () => {
+        const isExpanded = fullDetails.classList.contains('active');
+        if (isExpanded) {
+          fullDetails.classList.remove('active');
+          document.getElementById('voir-plus').textContent = 'Voir plus';
+        } else {
+          fullDetails.classList.add('active');
+          document.getElementById('voir-plus').textContent = 'Voir moins';
+        }
+      });
+    }
+
+    // Nouvelle logique de recherche via API Python
+    searchInput.addEventListener('input', () => {
+      if (searchInput.value.length > 0) {
+        searchInput.placeholder = "";
+      } else {
+        searchInput.placeholder = placeholderText;
+      }
+      const q = searchInput.value.trim();
+      fetch(`/search?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+          // Adapter les données reçues pour correspondre à l'affichage existant
+          const pokemons = data.map(p => ({
+            id: String(p['Numéro']).padStart(3, '0'),
+            name: p['Nom'],
+            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
+            abilities: p['Capacités'] ? p['Capacités'].split(';') : [],
+            image_url: p['URL Image'] || `images/${String(p['Numéro']).padStart(3, '0')}.png`,
+            stats: {
+              PV: p['PV'],
+              Attaque: p['Attaque'],
+              Défense: p['Défense'],
+              'Attaque Spéciale': p['Attaque Spéciale'],
+              'Défense Spéciale': p['Défense Spéciale'],
+              Vitesse: p['Vitesse']
+            },
+            generation: p['Génération'],
+            region: p['Région'],
+            evolution: p['Évolution']
+          }));
+          renderMembers(pokemons);
+        });
+    });
+
+    // Charger les données au démarrage
+    window.onload = () => {
+      fetch('/search?q=')
+        .then(res => res.json())
+        .then(data => {
+          allPokemons = data.map(p => ({
+            id: String(p['Numéro']).padStart(3, '0'),
+            name: p['Nom'],
+            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
+            abilities: p['Capacités'] ? p['Capacités'].split(';') : [],
+            image_url: p['URL Image'] || `images/${String(p['Numéro']).padStart(3, '0')}.png`,
+            stats: {
+              PV: p['PV'],
+              Attaque: p['Attaque'],
+              Défense: p['Défense'],
+              'Attaque Spéciale': p['Attaque Spéciale'],
+              'Défense Spéciale': p['Défense Spéciale'],
+              Vitesse: p['Vitesse']
+            },
+            generation: p['Génération'],
+            region: p['Région'],
+            evolution: p['Évolution']
+          }));
+          renderMembers(allPokemons);
+        });
+    };
+  </script>
+</body>
+</html>
