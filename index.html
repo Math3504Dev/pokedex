@@ -75,6 +75,11 @@
     .full-details { display:none; margin-top:20px; animation:expandDetails 0.5s ease forwards; }
     .full-details.active { display:block; }
 
+    .author p{
+      font-size: 12px;
+      color: gray;
+    }
+
     @keyframes blink {0%,100%{opacity:1;}50%{opacity:0.2;}}
     @keyframes detailFadeIn {from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
     @keyframes expandDetails {from{height:0;opacity:0;}to{height:auto;opacity:1;}}
@@ -100,6 +105,12 @@
         <div id="mini-detail" class="mini-detail">
           <div class="members"></div>
         </div>
+      </div>
+      <div class="author">
+        <br>
+        <br>
+        <br>
+        <p>Made by SpiceThrower and The ReadHead</p>
       </div>
     </div>
     <div class="detail">
