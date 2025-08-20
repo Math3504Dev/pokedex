@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pokedex Rétro Fidèle</title>
+  <title>Pokédex Rétro Fidèle</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     /* RESET & VARIABLES */
@@ -75,14 +75,38 @@
     .full-details { display:none; margin-top:20px; animation:expandDetails 0.5s ease forwards; }
     .full-details.active { display:block; }
 
-    .author p{
-      font-size: 12px;
-      color: gray;
-    }
-
+    /* ANIMATIONS */
     @keyframes blink {0%,100%{opacity:1;}50%{opacity:0.2;}}
     @keyframes detailFadeIn {from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
     @keyframes expandDetails {from{height:0;opacity:0;}to{height:auto;opacity:1;}}
+
+    /* SMARTPHONE MEDIA QUERIES */
+    @media screen and (max-width: 768px) {
+      body { padding:8px; }
+      .container { flex-direction:column; min-height:90vh; border:4px solid var(--red); border-radius:8px; box-shadow:0 0 0 2px var(--dark-red); }
+      .sidebar, .detail { width:100%; padding:8px; }
+      .top-bar { height:48px; border-bottom:4px solid var(--gray); padding:0 8px; }
+      .top-bar .title { font-size:12px; letter-spacing:1px; }
+      .lights { gap:6px; }
+      .light { width:12px; height:12px; border:2px solid var(--gray); }
+      .scanner { width:32px; height:32px; border:4px solid var(--gray); }
+      .search-shape { height:32px; margin-bottom:16px; }
+      .search-shape::before { border:4px solid var(--gray); }
+      .search-shape input { height:28px; padding-left:40px; font-size:12px; line-height:28px; padding-top:6px; }
+      .search-shape input::placeholder { font-size:12px; line-height:28px; }
+      .mini-detail { height:300px; border:4px solid var(--gray); padding:6px; }
+      .members { gap:8px; margin-top:16px; }
+      .member { padding:16px; width:90px; font-size:8px; border-radius:8px; box-shadow:0 0 8px rgba(0,0,0,0.1); }
+      .photo { width:50px; height:50px; margin-bottom:6px; }
+      .detail-panel { border:4px solid var(--gray); padding:8px; }
+      .detail-panel img { width:96px; height:96px; margin-bottom:8px; }
+      .detail-panel h2, .detail-panel p { font-size:10px; margin-bottom:6px; }
+      .detail-panel .summary { margin-bottom:8px; }
+      .detail-panel button { margin-top:8px; padding:6px 10px; border:3px solid var(--gray); font-size:10px; }
+      .detail-panel ul { max-width:200px; }
+      .detail-panel ul li { margin:3px 0; padding:3px; border:3px solid var(--gray); font-size:8px; }
+      .full-details { margin-top:16px; }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
@@ -106,12 +130,6 @@
           <div class="members"></div>
         </div>
       </div>
-      <div class="author">
-        <br>
-        <br>
-        <br>
-        <p>Made by SpiceThrower and The RedHead</p>
-      </div>
     </div>
     <div class="detail">
       <div id="detail-content" class="detail-panel">
@@ -127,17 +145,28 @@
     const searchInput = document.getElementById('search');
     const placeholderText = "Rechercher...";
 
-    // Charger les données des CSV (inchangé)
+    // Load and merge CSV data
     function loadCSVs() {
       let infoData, imgData;
-      Papa.parse('pokedex_francais_complet.csv', { download: true, header: true, complete: res => {
-        infoData = res.data;
-        if (imgData) mergeData();
-      }});
-      Papa.parse('pokemon_images.csv', { download: true, header: true, delimiter: ',', complete: res => {
-        imgData = res.data;
-        if (infoData) mergeData();
-      }});
+      Papa.parse('./pokedex_francais_complet.csv', {
+        download: true,
+        header: true,
+        complete: res => {
+          infoData = res.data;
+          if (imgData) mergeData();
+        },
+        error: err => console.error('Error loading pokedex_francais_complet.csv:', err)
+      });
+      Papa.parse('./pokemon_images.csv', {
+        download: true,
+        header: true,
+        delimiter: ',',
+        complete: res => {
+          imgData = res.data;
+          if (infoData) mergeData();
+        },
+        error: err => console.error('Error loading pokemon_images.csv:', err)
+      });
 
       function mergeData() {
         allPokemons = infoData.map(p => {
@@ -148,7 +177,7 @@
             name: p.Nom,
             types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
             abilities: p.Capacités ? p.Capacités.split(';') : [],
-            image_url: img['URL Image'] || `images/${paddedNum}.png`,
+            image_url: img['URL Image'] || images/${paddedNum}.png,
             stats: {
               PV: p.PV,
               Attaque: p.Attaque,
@@ -166,7 +195,7 @@
       }
     }
 
-    // Afficher les cartes des Pokémon
+    // Render Pokémon cards
     function renderMembers(list) {
       membersDiv.innerHTML = list.map(p =>
         `
@@ -180,7 +209,7 @@
       document.querySelectorAll('.member').forEach(el => el.addEventListener('click', () => loadDetail(el.dataset.id)));
     }
 
-    // Afficher les détails d'un Pokémon (inchangé)
+    // Display Pokémon details
     function loadDetail(id, showFull = false) {
       const p = allPokemons.find(x => x.id === id);
       if (!p) return;
@@ -188,7 +217,7 @@
         <img src="${p.image_url}" alt="${p.name}">
         <h2>#${String(p.id).padStart(3,'0')} ${p.name}</h2>
         <p class="summary">Types: ${p.types.join(', ')}</p>
-        <ul>${p.abilities.map(a => `<li>${a}</li>`).join('')}</ul>
+        <ul>${p.abilities.map(a => <li>${a}</li>).join('')}</ul>
         <button id="voir-plus">${showFull ? 'Voir moins' : 'Voir plus'}</button>
         <div class="full-details${showFull ? ' active' : ''}">
           <h3>Statistiques</h3>
@@ -202,7 +231,7 @@
           </ul>
           <p>Génération: ${p.generation}</p>
           <p>Région: ${p.region}</p>
-          ${p.evolution ? `<p>Évolue de: ${p.evolution}</p>` : ''}
+          ${p.evolution ? <p>Évolue de: ${p.evolution}</p> : ''}
         </div>
       `;
       detailDiv.innerHTML = html;
@@ -220,65 +249,26 @@
       });
     }
 
-    // Nouvelle logique de recherche via API Python
+    // Client-side search
     searchInput.addEventListener('input', () => {
       if (searchInput.value.length > 0) {
         searchInput.placeholder = "";
       } else {
         searchInput.placeholder = placeholderText;
       }
-      const q = searchInput.value.trim();
-      fetch(`/search?q=${encodeURIComponent(q)}`)
-        .then(res => res.json())
-        .then(data => {
-          // Adapter les données reçues pour correspondre à l'affichage existant
-          const pokemons = data.map(p => ({
-            id: String(p['Numéro']).padStart(3, '0'),
-            name: p['Nom'],
-            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
-            abilities: p['Capacités'] ? p['Capacités'].split(';') : [],
-            image_url: p['URL Image'] || `images/${String(p['Numéro']).padStart(3, '0')}.png`,
-            stats: {
-              PV: p['PV'],
-              Attaque: p['Attaque'],
-              Défense: p['Défense'],
-              'Attaque Spéciale': p['Attaque Spéciale'],
-              'Défense Spéciale': p['Défense Spéciale'],
-              Vitesse: p['Vitesse']
-            },
-            generation: p['Génération'],
-            region: p['Région'],
-            evolution: p['Évolution']
-          }));
-          renderMembers(pokemons);
-        });
+      const query = searchInput.value.trim().toLowerCase();
+      const filteredPokemons = allPokemons.filter(p =>
+        query === '' ||
+        p.name.toLowerCase().includes(query) ||
+        p.types.some(type => type.toLowerCase().includes(query)) ||
+        p.id.includes(query)
+      );
+      renderMembers(filteredPokemons);
     });
 
-    // Charger les données au démarrage
+    // Load data on page load
     window.onload = () => {
-      fetch('/search?q=')
-        .then(res => res.json())
-        .then(data => {
-          allPokemons = data.map(p => ({
-            id: String(p['Numéro']).padStart(3, '0'),
-            name: p['Nom'],
-            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
-            abilities: p['Capacités'] ? p['Capacités'].split(';') : [],
-            image_url: p['URL Image'] || `images/${String(p['Numéro']).padStart(3, '0')}.png`,
-            stats: {
-              PV: p['PV'],
-              Attaque: p['Attaque'],
-              Défense: p['Défense'],
-              'Attaque Spéciale': p['Attaque Spéciale'],
-              'Défense Spéciale': p['Défense Spéciale'],
-              Vitesse: p['Vitesse']
-            },
-            generation: p['Génération'],
-            region: p['Région'],
-            evolution: p['Évolution']
-          }));
-          renderMembers(allPokemons);
-        });
+      loadCSVs();
     };
   </script>
 </body>
