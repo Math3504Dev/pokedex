@@ -108,7 +108,6 @@
       .full-details { margin-top:16px; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
   <div class="top-bar">
@@ -139,99 +138,63 @@
   </div>
 
   <script>
-    let allPokemons = [];
     const membersDiv = document.querySelector('.members');
     const detailDiv = document.getElementById('detail-content');
     const searchInput = document.getElementById('search');
     const placeholderText = "Rechercher...";
 
-    // Load and merge CSV data
-    function loadCSVs() {
-      let infoData, imgData;
-      Papa.parse('./pokedex_francais_complet.csv', {
-        download: true,
-        header: true,
-        complete: res => {
-          infoData = res.data;
-          if (imgData) mergeData();
-        },
-        error: err => console.error('Error loading pokedex_francais_complet.csv:', err)
-      });
-      Papa.parse('./pokemon_images.csv', {
-        download: true,
-        header: true,
-        delimiter: ',',
-        complete: res => {
-          imgData = res.data;
-          if (infoData) mergeData();
-        },
-        error: err => console.error('Error loading pokemon_images.csv:', err)
-      });
+    // Normalisation des accents pour cohérence (bien que le serveur le fasse déjà)
+    function normalize(str) {
+      return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
 
-      function mergeData() {
-        allPokemons = infoData.map(p => {
-          const paddedNum = String(p.Numéro).padStart(3, '0');
-          const img = imgData.find(i => String(i.Numéro).padStart(3, '0') === paddedNum) || {};
-          return {
-            id: paddedNum,
-            name: p.Nom,
-            types: [p['Type 1']].concat(p['Type 2'] ? [p['Type 2']] : []),
-            abilities: p.Capacités ? p.Capacités.split(';') : [],
-            image_url: img['URL Image'] || images/${paddedNum}.png,
-            stats: {
-              PV: p.PV,
-              Attaque: p.Attaque,
-              Défense: p.Défense,
-              'Attaque Spéciale': p['Attaque Spéciale'],
-              'Défense Spéciale': p['Défense Spéciale'],
-              Vitesse: p.Vitesse
-            },
-            generation: p.Génération,
-            region: p.Région,
-            evolution: p.Évolution
-          };
-        });
-        renderMembers(allPokemons);
+    // Charger les Pokémon depuis l'API
+    async function fetchPokemons(query = '') {
+      try {
+        const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        renderMembers(data);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des Pokémon:', error);
+        membersDiv.innerHTML = '<p>Erreur lors du chargement des Pokémon.</p>';
       }
     }
 
-    // Render Pokémon cards
-    function renderMembers(list) {
-      membersDiv.innerHTML = list.map(p =>
-        `
-        <div class="member" data-id="${p.id}">
-          <div class="photo"><img src="${p.image_url}" alt="${p.name}"></div>
-          <h2>#${String(p.id).padStart(3,'0')}</h2>
-          <p class="title">${p.name}</p>
+    // Afficher les cartes Pokémon
+    function renderMembers(pokemons) {
+      membersDiv.innerHTML = pokemons.map(p => `
+        <div class="member" data-id="${p.Numéro}">
+          <div class="photo"><img src="${p['URL Image']}" alt="${p.Nom}"></div>
+          <h2>#${String(p.Numéro).padStart(3, '0')}</h2>
+          <p class="title">${p.Nom}</p>
         </div>
-        `
-      ).join('');
+      `).join('');
       document.querySelectorAll('.member').forEach(el => el.addEventListener('click', () => loadDetail(el.dataset.id)));
     }
 
-    // Display Pokémon details
+    // Afficher les détails d'un Pokémon
     function loadDetail(id, showFull = false) {
-      const p = allPokemons.find(x => x.id === id);
+      const p = allPokemons.find(x => x.Numéro === id);
       if (!p) return;
       let html = `
-        <img src="${p.image_url}" alt="${p.name}">
-        <h2>#${String(p.id).padStart(3,'0')} ${p.name}</h2>
-        <p class="summary">Types: ${p.types.join(', ')}</p>
-        <ul>${p.abilities.map(a => <li>${a}</li>).join('')}</ul>
+        <img src="${p['URL Image']}" alt="${p.Nom}">
+        <h2>#${String(p.Numéro).padStart(3, '0')} ${p.Nom}</h2>
+        <p class="summary">Types: ${p['Type 1']}${p['Type 2'] ? `, ${p['Type 2']}` : ''}</p>
         <button id="voir-plus">${showFull ? 'Voir moins' : 'Voir plus'}</button>
         <div class="full-details${showFull ? ' active' : ''}">
           <h3>Statistiques</h3>
           <ul>
-            <li>PV: ${p.stats.PV}</li>
-            <li>Attaque: ${p.stats.Attaque}</li>
-            <li>Défense: ${p.stats.Défense}</li>
-            <li>Attaque Spéciale: ${p.stats['Attaque Spéciale']}</li>
-            <li>Défense Spéciale: ${p.stats['Défense Spéciale']}</li>
-            <li>Vitesse: ${p.stats.Vitesse}</li>
+            <li>PV: ${p.PV}</li>
+            <li>Attaque: ${p.Attaque}</li>
+            <li>Défense: ${p.Défense}</li>
+            <li>Attaque Spéciale: ${p['Attaque Spéciale']}</li>
+            <li>Défense Spéciale: ${p['Défense Spéciale']}</li>
+            <li>Vitesse: ${p.Vitesse}</li>
           </ul>
-          <p>Génération: ${p.generation}</p>
-          <p>Région: ${p.region}</p>
-          ${p.evolution ? <p>Évolue de: ${p.evolution}</p> : ''}
+          <p>Génération: ${p.Génération}</p>
+          <p>Région: ${p.Région}</p>
+          ${p.Évolution ? `<p>Évolue de: ${p.Évolution}</p>` : ''}
         </div>
       `;
       detailDiv.innerHTML = html;
@@ -249,27 +212,46 @@
       });
     }
 
-    // Client-side search
+    // Cache global pour stocker tous les Pokémon
+    let allPokemons = [];
+
+    // Charger tous les Pokémon au démarrage
+    async function init() {
+      await fetchPokemons('');
+      allPokemons = Array.from(document.querySelectorAll('.member')).map(el => {
+        const id = el.dataset.id;
+        return allPokemons.find(p => p.Numéro === id) || {
+          Numéro: id,
+          Nom: el.querySelector('.title').textContent,
+          'URL Image': el.querySelector('img').src,
+          'Type 1': '',
+          'Type 2': '',
+          PV: '',
+          Attaque: '',
+          Défense: '',
+          'Attaque Spéciale': '',
+          'Défense Spéciale': '',
+          Vitesse: '',
+          Génération: '',
+          Région: '',
+          Évolution: ''
+        };
+      });
+    }
+
+    // Gérer la recherche
     searchInput.addEventListener('input', () => {
-      if (searchInput.value.length > 0) {
+      const query = searchInput.value.trim();
+      if (query.length > 0) {
         searchInput.placeholder = "";
       } else {
         searchInput.placeholder = placeholderText;
       }
-      const query = searchInput.value.trim().toLowerCase();
-      const filteredPokemons = allPokemons.filter(p =>
-        query === '' ||
-        p.name.toLowerCase().includes(query) ||
-        p.types.some(type => type.toLowerCase().includes(query)) ||
-        p.id.includes(query)
-      );
-      renderMembers(filteredPokemons);
+      fetchPokemons(query);
     });
 
-    // Load data on page load
-    window.onload = () => {
-      loadCSVs();
-    };
+    // Initialiser la page
+    window.onload = init;
   </script>
 </body>
 </html>
